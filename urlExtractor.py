@@ -3,7 +3,6 @@ from connection import downLoad
 import json
 from threading import Thread
 import re
-from mySQLInstance import conn
 from lxml import etree
 from urlPattern import extractNum
 import MySQLdb
@@ -68,8 +67,9 @@ class PTTransmit(Thread):
             self.TQ.put('OVER')
 
 class DataExtractor(Thread):
-    def setParams(self, ThreadQueue):
+    def setParams(self, ThreadQueue, mySQLConn):
         self.TQ = ThreadQueue
+        self.conn = mySQLConn
     def run(self):
         while True:
             if not self.TQ.empty():
@@ -78,19 +78,20 @@ class DataExtractor(Thread):
                     break
                 else:
                     if urlC.find('lawfirm') != -1:
-                        processLawFirm(urlC, self.TQ)
+                        processLawFirm(urlC, self.TQ, self.conn)
                     elif urlC.find('lawyer') != -1:
-                        processLawyer(urlC, self.TQ)
+                        processLawyer(urlC, self.TQ, self.conn)
                     elif urlC.find('court') != -1:
-                        processCourt(urlC, self.TQ)
+                        processCourt(urlC, self.TQ, self.conn)
                     elif urlC.find('judge') != -1:
-                        processJudge(urlC, self.TQ)
+                        processJudge(urlC, self.TQ, self.conn)
                     elif urlC.find('corporate') != -1:
-                        processCorporate(urlC, self.TQ)
+                        processCorporate(urlC, self.TQ, self.conn)
                     else:
                         pass
 
-def processLawFirm(urlC, queue):
+def processLawFirm(urlC, queue, conn):
+    #print 'processLawFirm'
     content = downLoad(urlC)
 
     mc_path="/html/body[@class='lvzhi lawfirm']/div[@id='bodyWrapper']/div[@id='content']/div[@id='basicInfo']/div[@class='content row']/div[@class='info col-sm-10']/div[@class='rw heading']/div[@class='title']"
@@ -183,8 +184,8 @@ def processLawFirm(urlC, queue):
         cur.close()
     except MySQLdb.Error,e:
         queue.put(urlC)
-
-def processLawyer(urlC, queue):
+def processLawyer(urlC, queue, conn):
+    #print 'processLawyer'
     content = downLoad(urlC)
 
     xm_path="/html/body[@class='lvzhi lawyer']/div[@id='bodyWrapper']/div[@id='content']/div[@id='basicInfo']/div[@class='content row']/div[@class='info col-sm-10']/div[@class='rw heading']/div[@class='title']"
@@ -236,17 +237,6 @@ def processLawyer(urlC, queue):
     if node_zyzt[0].text != None:
         state = node_zyzt[0].text
 
-    """
-    reLst.append('None' if node_xm[0].text==None else node_xm[0].text.encode('utf-8'))
-    reLst.append('None' if node_zyzh[0].text==None else node_zyzh[0].text.encode('utf-8'))
-    reLst.append('None' if node_lsmc[0].text==None else node_lsmc[0].text.encode('utf-8'))
-    reLst.append('None' if node_ssaj[0].text==None else node_ssaj[0].text.encode('utf-8'))
-    reLst.append('None' if node_jy[0].text==None else node_jy[0].text.encode('utf-8'))
-    reLst.append('None' if node_xl[0].text==None else node_xl[0].text.encode('utf-8'))
-    reLst.append('None' if node_xb[0].text==None else node_xb[0].text.encode('utf-8'))
-    reLst.append('None' if node_zyzt[0].text==None else node_zyzt[0].text.encode('utf-8'))
-    """
-
     reLst.append(lawyer_name)
     reLst.append(occupation_number)
     reLst.append(law_firm_name)
@@ -263,8 +253,8 @@ def processLawyer(urlC, queue):
         cur.close()
     except MySQLdb.Error,e:
         queue.put(urlC)
-
-def processCourt(urlC, queue):
+def processCourt(urlC, queue, conn):
+    #print 'processCourt'
     content = downLoad(urlC)
 
     xm_path = "/html/body[@class='lvzhi court']/div[@id='bodyWrapper']/div[@id='content']/div[@id='basicInfo']/div[@class='content row']/div[@class='info col-sm-10']/div[@class='rw heading']/div[@class='title']"
@@ -285,10 +275,6 @@ def processCourt(urlC, queue):
         court_name = node_xm[0].text.strip()
     if node_ssaj[0].text != None:
         case_number = extractNum(node_ssaj[0].text)
-    """
-    reLst.append('None' if node_xm[0].text==None else node_xm[0].text.encode('utf-8'))
-    reLst.append('None' if node_ssaj[0].text==None else node_ssaj[0].text.encode('utf-8'))
-    """
 
     reLst.append(court_name)
     reLst.append(case_number)
@@ -300,8 +286,8 @@ def processCourt(urlC, queue):
         cur.close()
     except MySQLdb.Error,e:
         queue.put(urlC)
-
-def processJudge(urlC, queue):
+def processJudge(urlC, queue, conn):
+    #print 'processJudge'
     content = downLoad(urlC)
 
     xm_path = "/html/body[@class='lvzhi judge']/div[@id='bodyWrapper']/div[@id='content']/div[@id='basicInfo']/div[@class='content row']/div[@class='info col-sm-10']/div[@class='rw heading']/div[@class='title']"
@@ -328,12 +314,6 @@ def processJudge(urlC, queue):
     if node_ssaj[0].text != None:
         case_number = extractNum(node_ssaj[0].text)
 
-    """
-    reLst.append('None' if node_xm[0].text==None else node_xm[0].text.encode('utf-8'))
-    reLst.append('None' if node_fy[0].text==None else node_fy[0].text.encode('utf-8'))
-    reLst.append('None' if node_ssaj[0].text==None else node_ssaj[0].text.encode('utf-8'))
-    """
-
     reLst.append(judge_name)
     reLst.append(court)
     reLst.append(case_number)
@@ -345,8 +325,8 @@ def processJudge(urlC, queue):
         cur.close()
     except MySQLdb.Error,e:
         queue.put(urlC)
-
-def processCorporate(urlC, queue):
+def processCorporate(urlC, queue, conn):
+    #print 'processCorporate'
     content = downLoad(urlC)
 
     gspath="/html/body[@class='lvzhi corporate']/div[@id='bodyWrapper']/div[@id='content']/div[@id='basicInfo']/div[@class='content row']/div[@class='info col-sm-10']/div[@class='rw heading']/div[@class='title']"
@@ -397,17 +377,6 @@ def processCorporate(urlC, queue):
         principle = "".join(node_db[0].itertext()).strip().replace('\n','').replace('\t','').replace('\r','')
     if len(node_hy) != 0:
         industry = "".join(node_hy[0].itertext()).strip().replace('\n','').replace('\t','').replace('\r','')
-
-    """
-    reLst.append('None' if node_gs[0].text==None else node_gs[0].text.encode('utf-8'))
-    reLst.append('None' if node_gp[0].text==None else node_gp[0].text.encode('utf-8'))
-    reLst.append('None' if node_dz[0].text==None else node_dz[0].text.encode('utf-8'))
-    reLst.append('None' if len(node_dh)==0 else "".join(node_dh[0].itertext()).encode('utf-8').strip().replace('\n','').replace('\t','').replace('\r',''))
-    reLst.append('None' if len(node_gw)==0 else node_gw[0].attrib.get('href','None').encode('utf-8'))
-    reLst.append('None' if len(node_sj)==0 else "".join(node_sj[0].itertext()).encode('utf-8').strip().replace('\n','').replace('\t','').replace('\r',''))
-    reLst.append('None' if len(node_db)==0 else "".join(node_db[0].itertext()).encode('utf-8').strip().replace('\n','').replace('\t','').replace('\r',''))
-    reLst.append('None' if len(node_hy)==0 else "".join(node_hy[0].itertext()).encode('utf-8').strip().replace('\n','').replace('\t','').replace('\r',''))
-    """
 
     reLst.append(corporate_name)
     reLst.append(stock_id)

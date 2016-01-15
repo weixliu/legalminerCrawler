@@ -12,7 +12,7 @@ from urlExtractor import Extractor
 from urlExtractor import Transmit
 from urlExtractor import PTTransmit
 from urlExtractor import DataExtractor
-from mySQLInstance import conn
+from mySQLInstance import initDbConnection
 
 URL_QUEUE = PQueue()
 LOG_QUEUE = PQueue()
@@ -50,6 +50,7 @@ def urlCrawler(urlQueue, logQueue):
         e.join()
 
 def contentCrawler(urlQueue, logQueue):
+    conn = initDbConnection()
     ThreadLst = []
     threadQueue = TQueue()
     pttransmit = PTTransmit()
@@ -57,7 +58,7 @@ def contentCrawler(urlQueue, logQueue):
     ThreadLst.append(pttransmit)
     for i in range(CONTENT_CRAWLER_THREAD_NUM):
         dataExtractor = DataExtractor()
-        dataExtractor.setParams(threadQueue)
+        dataExtractor.setParams(threadQueue, conn)
         ThreadLst.append(dataExtractor)
     for e in ThreadLst:
         e.start()
