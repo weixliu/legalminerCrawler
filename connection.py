@@ -13,17 +13,17 @@ def downLoad(url, timeout = TIMEOUT, retries = RETRIES):
             break
         except socket.timeout, e:
             retries -= 1
-            if retryTimes == 0:
+            if retries == 0:
                 content = None
                 break
         except urllib2.URLError, e:
             retries -= 1
-            if retryTimes == 0:
+            if retries == 0:
                 content = None
                 break
         except Exception, e:
             retries -= 1
-            if retryTimes == 0:
+            if retries == 0:
                 content = None
                 break
     return content

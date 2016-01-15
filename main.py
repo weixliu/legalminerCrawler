@@ -85,6 +85,6 @@ if __name__ == '__main__':
             print u'任务结束'
             conn.close()
             break
-        time.sleep(10)
+        time.sleep(60)
 
 
